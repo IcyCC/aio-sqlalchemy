@@ -45,6 +45,7 @@ class ModelMetaClass(type):
 
         mappings = dict()
         fields = list()
+        primary_key = None
         for k,v in attrs.items():
             if isinstance(v, Field):
                 fields.append(k)
@@ -79,12 +80,12 @@ class Model(dict, metaclass=ModelMetaClass):
 
     @classmethod
     async def find_by(cls, **kwargs):
-        items = kwargs.items()
+        items = tuple(kwargs.items())
         key,value = items[0]
         rs = await conn.select("{} WHERE {} = ?".format(cls.__select__, key), value)
         result = list()
         for r in rs:
-            result.append(cls(r))
+            result.append(cls(**r))
 
         return result
 
@@ -98,7 +99,12 @@ class Model(dict, metaclass=ModelMetaClass):
         return result
 
     async def save(self):
-        keys = self.__mappings__.keys()
+        keys = list()
+        mappings = self.__mappings__
+        for key, column in mappings.items():
+            if column.primary_key is True:
+                continue
+            keys.append(key)
         values = self.get_args_by_fields(keys)
         rows = await conn.execute("{}({}) VALUES ({})".format(self.__insert__, ','.join(keys),
                                                                     self.create_args(len(keys))),
@@ -121,6 +127,7 @@ class Model(dict, metaclass=ModelMetaClass):
                 raise Exception("value is None")
             values.append(v)
         return values
+
 
 
 

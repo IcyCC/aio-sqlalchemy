@@ -7,10 +7,20 @@ class User(orm.Model):
     user_id = orm.Integer(primary_key=True)
     name = orm.String(legth=255,default=None)
 
-async def add_one(user):
+async def init_connection():
     await conn.connection(loop=loop, **sql_config)
-    a = await User.all()
-    return a
+
+async def add_one(user):
+    await user.save()
+
+async def get_all():
+    all = await User.all()
+    return all
+
+async def get_by_id():
+    a = await User.find_by(user_id=1)
+    return a[0]
+
 sql_config = dict(host='127.0.0.1',
                   port=3306,
                   user='root',
@@ -25,12 +35,18 @@ sql_config = dict(host='127.0.0.1',
 loop = asyncio.get_event_loop()
 
 
-c = User(user_id=1, name='su')
+c1 = User(name='su')
+c2 = User(name="peter")
 
-a=loop.run_until_complete(add_one(c))
-print(a[0].name)
+loop.run_until_complete(init_connection())
 
 
+# a1 = loop.run_until_complete(asyncio.wait([add_one(c1),add_one(c2)]))
 
+# a2 = loop.run_until_complete(get_all())
+# print(len(a))
+
+a3 = loop.run_until_complete(get_by_id())
+print(a3)
 
 

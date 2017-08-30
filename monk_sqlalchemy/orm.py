@@ -81,8 +81,10 @@ class Model(dict, metaclass=ModelMetaClass):
     @classmethod
     async def find_by(cls, **kwargs):
         items = tuple(kwargs.items())
-        key,value = items[0]
+        key, value = items[0]
         rs = await conn.select("{} WHERE {} = ?".format(cls.__select__, key), value)
+        if not rs:
+            return None
         result = list()
         for r in rs:
             result.append(cls(**r))
@@ -92,6 +94,8 @@ class Model(dict, metaclass=ModelMetaClass):
     @classmethod
     async def all(cls):
         rs = await conn.select("{}".format(cls.__select__), args=None)
+        if not rs:
+            return None
         result = list()
         for r in rs:
             result.append(cls(**r))

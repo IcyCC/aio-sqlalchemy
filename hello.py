@@ -21,6 +21,10 @@ async def get_by_id():
     a = await User.find_by(user_id=1)
     return a[0]
 
+async def update(id,name):
+    a = await User.find_by(user_id=id)
+    await a[0].update(name=name)
+
 sql_config = dict(host='127.0.0.1',
                   port=3306,
                   user='root',
@@ -42,11 +46,12 @@ loop.run_until_complete(init_connection())
 
 
 # a1 = loop.run_until_complete(asyncio.wait([add_one(c1),add_one(c2)]))
+loop.run_until_complete(update(3,'pig'))
 
 # a2 = loop.run_until_complete(get_all())
 # print(len(a))
 
-a3 = loop.run_until_complete(get_by_id())
-print(a3)
+# a3 = loop.run_until_complete(get_by_id())
+loop.close()
 
 

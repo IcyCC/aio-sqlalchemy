@@ -18,6 +18,15 @@ class Field(object):
     def __str__(self):
         return "< {} {} {} >".format(self.__class__.__name__, self.name, self.type)
 
+    @property
+    def sql_column(self):
+        column = "{} {} ".format(self.name, self.type)
+        if self.primary_key is True:
+            column = column + "PRIMARY KEY AUTO_INCREMENT "
+        if self.default is not None:
+            column = column + "DEFAULT {}".format(str(self.default))
+        return column
+
 
 class String(Field):
 
@@ -63,6 +72,7 @@ class ModelMetaClass(type):
         attrs['__mappings__'] = mappings
         attrs['__select__'] = "SELECT * FROM {}".format(attrs['__tablename__'])
         attrs['__insert__'] = "INSERT INTO {}".format(attrs['__tablename__'])
+        attrs['__update__'] = "UPDATE {} SET ".format(attrs['__tablename__'])
 
         return type.__new__(cls, name, bases, attrs)
 
@@ -111,10 +121,29 @@ class Model(dict, metaclass=ModelMetaClass):
             keys.append(key)
         values = self.get_args_by_fields(keys)
         rows = await conn.execute("{}({}) VALUES ({})".format(self.__insert__, ','.join(keys),
-                                                                    self.create_args(len(keys))),
+                                                              self.create_args(len(keys))),
                                         values)
         if rows != 1:
             logging.warning('failed to insert record: affected rows: %s' % rows)
+
+    async def update(self, **kwargs):
+        keys = list()
+        values = list()
+        for k, v in kwargs.items():
+            keys.append(str(k)+" = ? ")
+            values.append(v)
+        rows = await conn.execute("{} {} WHERE {} = ?".format(self.__update__, ','.join(keys), self.__primary_key__),
+                                  args=values + [getattr(self, self.__primary_key__, None)])
+        if rows != 1:
+            logging.warning('failed to insert record: affected rows: %s' % rows)
+
+    @classmethod
+    async def create_table(cls, coding="utf-8"):
+        colums =[v.sql_column for v in cls.__mappings__.values()]
+        await conn.execute('CREATE TABLE {} ({});'.format(cls.__tablename__ , ','.join(colums)), args=None)
+        await conn.execute('ALTER TABLE {} CONVERT TO CHARACTER SET utf8 COLLATE utf8_general_ci;'
+                           .format(cls.__tablename__), args=None)
+
 
     @staticmethod
     def create_args(legth):
@@ -131,6 +160,7 @@ class Model(dict, metaclass=ModelMetaClass):
                 raise Exception("value is None")
             values.append(v)
         return values
+
 
 
 

@@ -40,7 +40,7 @@ async def execute(sql, args, size=None):
     logging.info(sql, str(args))
     async with _pool.get() as con:
         cur = await con.cursor()
-        await cur.execute(sql.replace('?', '%s'),args or ())
+        await cur.execute(sql.replace('?', '%s'), args or ())
         rs = cur.rowcount
         await cur.close()
         print("select size {} ".format(str(rs)))
